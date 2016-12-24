@@ -8,6 +8,7 @@ import java.util.Scanner;
 import javax.imageio.ImageIO;
 
 import org.openqa.selenium.By;
+import org.openqa.selenium.Capabilities;
 import org.openqa.selenium.OutputType;
 import org.openqa.selenium.Point;
 import org.openqa.selenium.TakesScreenshot;
@@ -16,6 +17,7 @@ import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.interactions.Actions;
 import org.openqa.selenium.internal.WrapsDriver;
+import org.openqa.selenium.remote.DesiredCapabilities;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.Select;
 import org.openqa.selenium.support.ui.WebDriverWait;
@@ -27,10 +29,15 @@ public class zuoye {
 	public static void main(String[] args) throws Exception {
 		// TODO Auto-generated method stub
 		// webdriver.gecko.driver
-		System.setProperty("webdriver.chrome.driver",
-				"C:\\Program Files (x86)\\Google\\Chrome\\Application\\chromedriver.exe");
+		System.setProperty("webdriver.chrome.driver","C:\\Program Files (x86)\\Google\\Chrome\\Application\\chromedriver.exe");
 		System.setProperty("webdriver.gecko.driver", "C:\\Program Files (x86)\\Mozilla Firefox\\geckodriver.exe");
+		System.setProperty("phantomjs.binary.path", "D:/Programs/phantomjs-2.1.1-windows/bin/phantomjs.exe");
+		
 
+		Capabilities capabilities = new DesiredCapabilities();
+		System.out.println(capabilities.isJavascriptEnabled());
+//		WebDriver driver = new PhantomJSDriver(capabilities );
+		
 		WebDriver driver = new ChromeDriver();
 
 		// WebDriver driver=new FirefoxDriver();
@@ -43,6 +50,7 @@ public class zuoye {
 		driver.get("http://10.8.9.49/");
 		waitForElementVisible(driver, By.cssSelector("#icode"), 3);
 		File yzmFile = captureElement(driver.findElement(By.id("icode")));
+		System.out.println(yzmFile.getAbsolutePath());
 		String code = OCR.recognizeText(yzmFile);
 		System.out.println("\n当前识别的验证码是：" + code);
 
@@ -71,6 +79,7 @@ public class zuoye {
 					driver.get("http://10.8.9.49/");
 					waitForElementVisible(driver, By.cssSelector("#icode"), 3);
 					yzmFile = captureElement(driver.findElement(By.id("icode")));
+					System.out.println(yzmFile.getAbsolutePath());
 					code = OCR.recognizeText(yzmFile);
 					System.out.println("\n当前识别的验证码是：" + code);
 					isSuccess = false;
@@ -90,23 +99,37 @@ public class zuoye {
 		// driver.findElement(By.cssSelector("li.top:nth-child(5) >
 		// ul:nth-child(2) > li:nth-child(8) > a:nth-child(1)")).click();
 		waitForElementPresent(driver, By.cssSelector("#iframeautoheight"), 3);
-		driver.switchTo().frame("iframeautoheight");
+		driver = driver.switchTo().frame("iframeautoheight");
+		waitPageRefresh(driver, 3);
 
-		waitForElementPresent(driver, By.cssSelector("#ddlXN"), 10);
+		if (!waitForElementPresent(driver, By.cssSelector("#ddlXN"), 20)){
+			System.out.println(driver.getPageSource());
+			System.exit(0);
+		}
 		Select xn = new Select(driver.findElement(By.cssSelector("#ddlXN")));
 
 		List<WebElement> options = xn.getOptions();
 
 		for (int i = 1; i < options.size(); i++) {
+			xn = new Select(driver.findElement(By.cssSelector("#ddlXN")));
 			xn.selectByIndex(i);
+			options = xn.getOptions();
 			System.out.println(options.get(i).getText());
 			driver.findElement(By.xpath("//*[@id='btn_xn']")).click();
-			waitPageRefresh(driver,20);
+			waitPageRefresh(driver, 20);
+			Thread.sleep(1000);
+			
+			List<WebElement> trs = driver.findElements(By.xpath("//*[@id='Datagrid1']/tbody/tr"));
+			System.out.println("size:"+trs.size());
+			for (WebElement webElement : trs) {
+				//*[@id="Datagrid1"]/tbody/tr[2]/td[4]
+				
+				String keName = webElement.findElement(By.xpath("td[4]")).getText();
+				String score = webElement.findElement(By.xpath("td[13]")).getText();
+				System.out.println(String.format("%s:\t%s", keName, score));
+			}
 
 		}
-		
-		
-		
 
 		// ((JavascriptExecutor)driver).executeScript("document.querySelector('#headDiv
 		// > ul > li:nth-child(3) > ul > li:nth-child(1) > a').click();");
@@ -203,7 +226,7 @@ public class zuoye {
 
 	}
 
-	public static boolean waitPageRefresh(WebDriver driver,int timeout) {
+	public static boolean waitPageRefresh(WebDriver driver, int timeout) {
 		try {
 			new WebDriverWait(driver, timeout).until(ExpectedConditions.refreshed(null));
 			return true;
